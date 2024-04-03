@@ -149,6 +149,61 @@ GROUP BY YEAR(OrderDate)
 ORDER BY OrderYear
 ```
 ![image](https://github.com/JonesKwameOsei/Azure-Synapse-Serverless-SQL-Pool-/assets/81886509/de7896ee-a6f3-4db7-977e-dd86542a91e6)<p>
+Review the results and note that they include only the sales counts for 2019 and 2020. This filtering is achieved by including a wildcard for the partition folder value in the BULK path (year=*) and a WHERE clause based on the filepath property of the results returned by OPENROWSET (which in this case has the alias [result]).
+7. Name your script Sales Parquet query, and publish it. Then close the script pane.
+
+### Query JSON Files with SQL 
+JSON is another widely used data format, so it is beneficial to be able to query .json files in a serverless SQL pool.
+1. Return to the files tab containing the **file system for your data lake**, and navigate to the sales folder to view the csv, json, and parquet folders.<p>
+![image](https://github.com/JonesKwameOsei/Azure-Synapse-Serverless-SQL-Pool-/assets/81886509/d5109285-7f99-4183-ae71-20353ac07729)<p>
+2. Select the json folder, and then in the New SQL script list on the toolbar, select Select TOP 100 rows.
+3. In the "File type" list, choose "Text format", and then apply the settings to open a new SQL script that queries the data in the folder. The script should resemble this:<p>
+```-- This is auto-generated code
+SELECT
+    TOP 100 *
+FROM
+    OPENROWSET(
+        BULK 'https://datalake7zr8296.dfs.core.windows.net/files/sales/json/**',
+        FORMAT = 'CSV',
+        PARSER_VERSION = '2.0'
+    ) AS [result]
+```
+The script is intended to query comma-delimited (CSV) data instead of JSON, so you need to make a few modifications before it will work successfully.<p>
+![image](https://github.com/JonesKwameOsei/Azure-Synapse-Serverless-SQL-Pool-/assets/81886509/100918d9-8a8e-424a-8381-71b1daae6694)<p>
+4. Modify the script as follows (replacing "datalakexxxxxxx" with the name of your data lake storage account) to:
+- Remove the parser version parameter.
+- Add parameters for field terminator, quoted fields, and row terminators with the character code 0x0b.
+- Format the results as a single field containing the JSON row of data as an NVARCHAR(MAX) string.<p>
+```
+SELECT
+    TOP 100 *
+FROM
+    OPENROWSET(
+        BULK 'https://datalake7zr8296.dfs.core.windows.net/files/sales/json/**',
+        FORMAT = 'CSV',
+        FIELDTERMINATOR ='0x0b',
+        FIELDQUOTE = '0x0b',
+        ROWTERMINATOR = '0x0b'
+    ) WITH (Doc NVARCHAR(MAX)) as rows
+```
+5. Run the modified code and observe that the results include a JSON document for each order.<p>
+![image](https://github.com/JonesKwameOsei/Azure-Synapse-Serverless-SQL-Pool-/assets/81886509/21119059-932b-400b-9784-402000488160)<p>
+6. Modify the query as follows (replacing datalakexxxxxxx with the name of your data lake storage account) so that it uses the JSON_VALUE function to extract individual field values from the JSON data.<p>
+```
+SELECT JSON_VALUE(Doc, '$.SalesOrderNumber') AS OrderNumber,
+       JSON_VALUE(Doc, '$.CustomerName') AS Customer,
+       Doc
+FROM
+    OPENROWSET(
+        BULK 'https://datalake7zr8296.dfs.core.windows.net/files/sales/json/**',
+        FORMAT = 'CSV',
+        FIELDTERMINATOR ='0x0b',
+        FIELDQUOTE = '0x0b',
+        ROWTERMINATOR = '0x0b'
+    ) WITH (Doc NVARCHAR(MAX)) as rows
+```
+
+
 
 
 
