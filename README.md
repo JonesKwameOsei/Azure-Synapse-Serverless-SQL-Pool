@@ -202,7 +202,119 @@ FROM
         ROWTERMINATOR = '0x0b'
     ) WITH (Doc NVARCHAR(MAX)) as rows
 ```
+7. Name the script **Sales JSON query**, and **publish it**. Then close the script pane.
+Having queried these files in the **data lake** with **SQL** in the **Azure Synapse Analytics Workspace**, we will next utilise **Synapse SQL pool** to access external data in a databse.
+## Access External Data in a Database with PolyBase
+So far, we have utilised the OPENROWSET function in a SELECT query to retrieve data from files in a data lake. The queries have been executed in the context of the master database in the serverless SQL pool. This approach is suitable for an initial exploration of the data, but if we plan to create more complex queries, it may be more effective to use the PolyBase capability of Synapse SQL to create objects in a database that reference the external data location.
+### Create an External Data Source
+Defining an external data source in a database can reference the data lake location where the files are stored. 
+1. In Synapse Studio, on the **Develop** page, in the + menu, select **SQL script**.
+2. In the new script pane, add the following code (replacing "datalakexxxxxxx" with the name of your data lake storage account) to create a new database and add an external data source to it.
+```
+CREATE DATABASE Sales
+  COLLATE Latin1_General_100_BIN2_UTF8;
+GO;
 
+Use Sales;
+GO;
+
+CREATE EXTERNAL DATA SOURCE sales_data WITH (
+    LOCATION = 'https://datalake7zr8296.dfs.core.windows.net/files/sales/'
+);
+GO;
+```
+3. Modify the script properties to change its name to **Create Sales DB**, and publish it.<p>
+![image](https://github.com/JonesKwameOsei/Azure-Synapse-Serverless-SQL-Pool-/assets/81886509/3fe585d9-94b4-458f-9cfd-f71c4f723a3d)<p>
+4. Make sure that the script is connected to the Built-in SQL pool and the master database, and then run it.
+5. Return to the **Data** page and use the ↻ button at the top right of Synapse Studio to refresh the page. Then view the Workspace tab in the Data pane, where a SQL database list is now displayed. Expand this list to verify that the Sales database has been created.
+6. Expand the Sales database, its External Resources folder, and the External data sources folder under that to see the sales_data external data source you created.<p>
+![image](https://github.com/JonesKwameOsei/Azure-Synapse-Serverless-SQL-Pool-/assets/81886509/69f5a82f-646b-4873-9e62-6843ecb253de)<p>
+7. In the ... menu for the Sales database, select New SQL script > Empty script. Then in the new script pane, enter and run the following query:
+```
+SELECT *
+FROM
+    OPENROWSET(
+        BULK 'csv/*.csv',
+        DATA_SOURCE = 'sales_data',
+        FORMAT = 'CSV',
+        PARSER_VERSION = '2.0'
+    ) AS orders
+```
+The query utilises the external data source to connect to the data lake, and the **OPENROWSET** function now only need to reference the relative path to the .csv files.<p>
+**SQL script** run successfully.:<p>
+![image](https://github.com/JonesKwameOsei/Azure-Synapse-Serverless-SQL-Pool-/assets/81886509/ba4d7150-816e-4459-b007-2bf5acbc1064)<p>
+8. Modify the code as follows to query the parquet files using the data source.
+```
+SELECT *
+FROM  
+    OPENROWSET(
+        BULK 'parquet/year=*/*.snappy.parquet',
+        DATA_SOURCE = 'sales_data',
+        FORMAT='PARQUET'
+    ) AS orders
+WHERE orders.filepath(1) = '2019'
+```
+![image](https://github.com/JonesKwameOsei/Azure-Synapse-Serverless-SQL-Pool-/assets/81886509/939509a6-20c0-4678-936f-8a0d6e3273c1)<p>
+### Create an External Table
+The external data source makes it easier to access the files in the data lake, but it is more conveniet to work with tables in a database. Fortunately, we can also define external file formats and external tables that encapsulate rowsets from files in database tables.
+
+1. Replace the SQL code with the following statement to define an external data format for CSV files, and an external table that references the CSV files, and run it:
+```
+CREATE EXTERNAL FILE FORMAT CsvFormat
+    WITH (
+        FORMAT_TYPE = DELIMITEDTEXT,
+        FORMAT_OPTIONS(
+        FIELD_TERMINATOR = ',',
+        STRING_DELIMITER = '"'
+        )
+    );
+GO;
+
+CREATE EXTERNAL TABLE dbo.orders
+(
+    SalesOrderNumber VARCHAR(10),
+    SalesOrderLineNumber INT,
+    OrderDate DATE,
+    CustomerName VARCHAR(25),
+    EmailAddress VARCHAR(50),
+    Item VARCHAR(30),
+    Quantity INT,
+    UnitPrice DECIMAL(18,2),
+    TaxAmount DECIMAL (18,2)
+)
+WITH
+(
+    DATA_SOURCE =sales_data,
+    LOCATION = 'csv/*.csv',
+    FILE_FORMAT = CsvFormat
+);
+GO
+```
+2. Refresh and expand the **External tables folder** in the **Data pane** and confirm that a table named **dbo.orders** has been created in the **Sales database**.<p>
+![image](https://github.com/JonesKwameOsei/Azure-Synapse-Serverless-SQL-Pool-/assets/81886509/bca723f1-fc27-41a3-a76c-5e37202f0fa9)<p>
+3. In the ... menu for the dbo.orders table, select **New SQL script > Select TOP 100 rows**.<p>
+![image](https://github.com/JonesKwameOsei/Azure-Synapse-Serverless-SQL-Pool-/assets/81886509/0499596e-b30a-45fc-b6e1-7a100e12b595)<p>
+4. Run the **SELECT script** that has been generated, and verify that it retrieves the first 100 rows of data from the table, which in turn references the files in the data lake.<p>
+![image](https://github.com/JonesKwameOsei/Azure-Synapse-Serverless-SQL-Pool-/assets/81886509/60b6d52a-d67e-4669-8b67-6fd33d2fab54)<p>
+### Visualising Query Results
+Having explored various ways to query files in the data lake by using SQL queries, we can analyse the results of these queries to **gain insights** into the data. Often, insights are easier to uncover by **visualising the query results in a chart**; which we can easily do by using the **integrated charting functionality** in the **Synapse Studio query editor**.
+
+1. On the **Develop page**, create **a new empty SQL query**.
+2. Ensure that the script is connected to the **Built-in** SQL pool and the **Sales database**.
+3. Enter and **run** the following SQL code:
+```
+SELECT YEAR(OrderDate) AS OrderYear,
+       SUM((UnitPrice * Quantity) + TaxAmount) AS GrossRevenue
+FROM dbo.orders
+GROUP BY YEAR(OrderDate)
+ORDER BY OrderYear;
+```
+![image](https://github.com/JonesKwameOsei/Azure-Synapse-Serverless-SQL-Pool-/assets/81886509/40128fad-aab9-423c-8ac0-89c7e23aa05c)<p>
+4. In the **Results pane**, select **Chart** and view the chart that is created for you; which should be a line chart.<p>
+![image](https://github.com/JonesKwameOsei/Azure-Synapse-Serverless-SQL-Pool-/assets/81886509/a11279e2-48cb-4745-a25e-e0e7da4fd4af)<p>
+
+5. Change the **Category column** to **OrderYear** so that the line chart shows the revenue trend over the three year period from **2019 to 2021**:<p>
+![image](https://github.com/JonesKwameOsei/Azure-Synapse-Serverless-SQL-Pool-/assets/81886509/ec1c1864-fdd7-4f84-ba0e-b2001086f3c8)<p>
 
 
 
