@@ -12,9 +12,14 @@ This project aims to utilise **Azure Synapse Analytics** to query data in a **da
 rm -r dp500 -f
 git clone https://github.com/MicrosoftLearning/DP-500-Azure-Data-Analyst dp500
 ```
-4. Enter a suitable password when prompted to be set up for the **Azure Synapse SQL pool**.
-5. If prompted, choose which subscription you want to use (this will only happen if you have access to multiple Azure subscriptions).
-6. Wait for the script to complete the set up.
+4. After the repo has been cloned, enter the following commands to change to the folder for this lab and run the setup.ps1 script it contains:
+```
+cd dp500/Allfiles/01
+./setup.ps1
+```
+5. Enter a suitable password when prompted to be set up for the **Azure Synapse SQL pool**.
+6. If prompted, choose which subscription you want to use (this will only happen if you have access to multiple Azure subscriptions).
+7. Wait for the script to complete the set up.
 
 ## Query Data in Files 
 The script in the **./setup.ps1** sets up **an Azure Synapse Analytics workspace** and **an Azure Storage account** to store the **data lake**, and then uploads some data files to the data lake.
@@ -47,39 +52,140 @@ The script in the **./setup.ps1** sets up **an Azure Synapse Analytics workspace
 13.Return to the sales folder so you can see the csv, json, and parquet folders.<p>
 ![image](https://github.com/JonesKwameOsei/Azure-Synapse-Serverless-SQL-Pool-/assets/81886509/431b5e2f-a4d9-40d1-9682-5c4ba7718dc4)<p>
 
+### Use SQL to Query CSV Files
+1. Choose the csv folder, and then from the New SQL script list on the toolbar, select "Select TOP 100 rows".<p>
+![image](https://github.com/JonesKwameOsei/Azure-Synapse-Serverless-SQL-Pool-/assets/81886509/ca55d278-9e54-4fc9-a950-d4ebcd927617)<p>
+2. In the File type list, select Text format, and then apply the settings to open a new SQL script that queries the data in the folder.<p>
+![image](https://github.com/JonesKwameOsei/Azure-Synapse-Serverless-SQL-Pool-/assets/81886509/24cf00b1-d4e8-4ffa-9293-049b66eb71c0)<p>
+3. In the Properties pane for SQL Script 1, change the name to **Sales CSV query**, and adjust the result settings to display **All rows**. Then, click "Publish" on the toolbar to save the script, and use the Properties button (which looks similar to 🗏) at the right end of the toolbar to hide the Properties pane.<p>
+![image](https://github.com/JonesKwameOsei/Azure-Synapse-Serverless-SQL-Pool-/assets/81886509/cda69889-94b7-4909-a5cf-41879da5e007)<p>
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-4. After the repo has been cloned, enter the following commands to change to the folder for this lab and run the setup.ps1 script it contains:
+Review the SQL code that has been generated, which should be similar to this:
 ```
-cd dp500/Allfiles/01
-./setup.ps1
+SELECT
+    TOP 100 *
+FROM
+    OPENROWSET(
+        BULK 'https://datalake7zr8296.dfs.core.windows.net/files/sales/csv/**',
+        FORMAT = 'CSV',
+        PARSER_VERSION = '2.0'
+    ) AS [result]
 ```
+This code utilizes the OPENROWSET to read data from the CSV files in the sales folder and fetches the first 100 rows of data.
+5. In the **Connect to** list, make sure **Built-in** is selected - this represents the built-in SQL Pool that was created with your workspace.
+6. On the toolbar, click the ▷ Run button to execute the SQL code, and examine the results, which should resemble this:<p>
+![image](https://github.com/JonesKwameOsei/Azure-Synapse-Serverless-SQL-Pool-/assets/81886509/beeb4532-dad4-48c2-a501-f335d53b466a)<p>
+7. Note that the results consist of columns named C1, C2, and so on. In this example, the CSV files do not include the column headers. While it's possible to work with the data using the generic column names that have been assigned, or by ordinal position, it will be easier to understand the data if you define a tabular schema. To accomplish this, add a WITH clause to the OPENROWSET function as shown here (replacing "datalakexxxxxxx" with the name of your data lake storage account), and then rerun the query:<p>
+```
+SELECT
+    TOP 100 *
+FROM
+    OPENROWSET(
+        BULK 'https://datalake7zr8296.dfs.core.windows.net/files/sales/csv/**',
+        FORMAT = 'CSV',
+        PARSER_VERSION = '2.0'
+)
+WITH (
+        SalesOrderNumber VARCHAR(10) COLLATE Latin1_General_100_BIN2_UTF8,
+        SalesOrderLineNumber INT,
+        OrderDate DATE,
+        CustomerName VARCHAR(25) COLLATE Latin1_General_100_BIN2_UTF8,
+        EmailAddress VARCHAR(50) COLLATE Latin1_General_100_BIN2_UTF8,
+        Item VARCHAR(30) COLLATE Latin1_General_100_BIN2_UTF8,
+        Quantity INT,
+        UnitPrice DECIMAL(18,2),
+        TaxAmount DECIMAL (18,2)
+    ) AS [result]
+```
+Now, our new table with headers:<p>
+![image](https://github.com/JonesKwameOsei/Azure-Synapse-Serverless-SQL-Pool-/assets/81886509/095f5089-cdef-4561-b64f-22b35f0689c1)<p>
+8. Save the changes to your script by clicking **Publish**, and then close the script pane.
+### Query Parquet Files with SQL
+Although CSV is simple to work with, it is typical in large-scale data processing situations to employ file formats that are designed for compression, indexing, and partitioning. Parquet is one of the most frequently used formats for this purpose.
+1. Go back to the files tab containing the file system for your data lake, and navigate to the sales folder to view the csv, json, and parquet folders.<p>
+![image](https://github.com/JonesKwameOsei/Azure-Synapse-Serverless-SQL-Pool-/assets/81886509/86008cf9-a61b-485b-b1cc-5d332650e23a)<p>
+2. Select the parquet folder, and then in the New SQL script list on the toolbar, select Select TOP 100 rows.<p>
+![image](https://github.com/JonesKwameOsei/Azure-Synapse-Serverless-SQL-Pool-/assets/81886509/a130e866-56a8-4af6-99bd-2b1b7f4bf64e)<p>
+3. In the "File type" list, choose "Parquet format", and then apply the settings to open a new SQL script that queries the data in the folder. The script should resemble this:
+```
+-- This is auto-generated code
+SELECT
+    TOP 100 *
+FROM
+    OPENROWSET(
+        BULK 'https://datalake7zr8296.dfs.core.windows.net/files/sales/parquet/**',
+        FORMAT = 'PARQUET'
+    ) AS [result]
+```
+![image](https://github.com/JonesKwameOsei/Azure-Synapse-Serverless-SQL-Pool-/assets/81886509/05c6f938-ceb6-4e32-a5c0-dc9c386c89fe)<p>
+4. Run the code, and observe that it retrieves sales order data with the same schema as the CSV files you previously examined. The schema information is embedded in the Parquet file, so the correct column names are displayed in the results.<p>
+![image](https://github.com/JonesKwameOsei/Azure-Synapse-Serverless-SQL-Pool-/assets/81886509/081939f5-4974-4f11-8110-f2d2cc41aa51)<p>
+5.Modify the code as follows (replacing "datalakexxxxxxx" with the name of your data lake storage account) and then run it.
+```
+SELECT YEAR(OrderDate) AS OrderYear,
+       COUNT(*) AS OrderedItems
+FROM
+    OPENROWSET(
+        BULK 'https://datalake7zr8296.dfs.core.windows.net/files/sales/parquet/**',
+        FORMAT = 'PARQUET'
+    ) AS [result]
+GROUP BY YEAR(OrderDate)
+ORDER BY OrderYear
+```
+![image](https://github.com/JonesKwameOsei/Azure-Synapse-Serverless-SQL-Pool-/assets/81886509/119e6d22-6950-4296-8080-366dc71bb30c)<p>
+Note that the results include order counts for all three years - the wildcard used in the BULK path causes the query to return data from all subfolders.
+The subfolders reflect partitions in the Parquet data, which is a technique often used to optimize performance for systems that can process multiple partitions of data in parallel. You can also use partitions to filter the data.
+6. Modify the code as follows (replacing datalakexxxxxxx with the name of your data lake storage account) and then run it.
+```
+SELECT YEAR(OrderDate) AS OrderYear,
+       COUNT(*) AS OrderedItems
+FROM
+    OPENROWSET(
+        BULK 'https://datalake7zr8296.dfs.core.windows.net/files/sales/parquet/year=*/',
+        FORMAT = 'PARQUET'
+    ) AS [result]
+WHERE [result].filepath(1) IN ('2019', '2020')
+GROUP BY YEAR(OrderDate)
+ORDER BY OrderYear
+```
+![image](https://github.com/JonesKwameOsei/Azure-Synapse-Serverless-SQL-Pool-/assets/81886509/de7896ee-a6f3-4db7-977e-dd86542a91e6)<p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
