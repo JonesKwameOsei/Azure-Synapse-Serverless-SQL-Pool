@@ -314,9 +314,13 @@ ORDER BY OrderYear;
 ![image](https://github.com/JonesKwameOsei/Azure-Synapse-Serverless-SQL-Pool-/assets/81886509/a11279e2-48cb-4745-a25e-e0e7da4fd4af)<p>
 
 5. Change the **Category column** to **OrderYear** so that the line chart shows the revenue trend over the three year period from **2019 to 2021**:<p>
-![image](https://github.com/JonesKwameOsei/Azure-Synapse-Serverless-SQL-Pool-/assets/81886509/ec1c1864-fdd7-4f84-ba0e-b2001086f3c8)<p>
+![image](https://github.com/JonesKwameOsei/Azure-Synapse-Serverless-SQL-Pool-/assets/81886509/ecf7ccad-bd53-49c9-b3f3-27c1ec5f7d98)<p>
+6. Change the **Chart type** to **Column** to see the yearly revenue as a **column chart**:<P>
+![image](https://github.com/JonesKwameOsei/Azure-Synapse-Serverless-SQL-Pool-/assets/81886509/bb83b9ed-77b3-4c19-8a16-621a909443dc)
+## Conclusion
+In this project, we have used **Azure Synapse Analytics Serverless SQL pool** to query various files in a **data lake** including **delimited files (CSV)**, **JSON files** and **Parquet files**. We also created **external data sources** in the **Synapse Studio** as well as creating **external table** to conviently query data in a table rather than referencing the external data source. Finally, we visualised the query results in the **Synapse Studio query editor** using the **integrated charting functionality**. 
 
-
+NB: For corrections or contributions, please reach out to me via [my eamil](oseikwamejones@gmail.com). 
 
 
 
