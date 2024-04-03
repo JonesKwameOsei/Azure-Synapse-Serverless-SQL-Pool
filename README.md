@@ -7,4 +7,13 @@ This project aims to utilise **Azure Synapse Analytics** to query data in a **da
 2. Click on the [>_] button located to the right of the search bar at the top of the page in the Azure portal to initiate the creation of a new Cloud Shell. Choose a PowerShell environment and set up storage if requested.<p>
 ![image](https://github.com/JonesKwameOsei/Azure-Synapse-Serverless-SQL-Pool-/assets/81886509/3bb22cc4-ab37-4e48-807f-2a3f57a03db5)<p>
 ![image](https://github.com/JonesKwameOsei/Azure-Synapse-Serverless-SQL-Pool-/assets/81886509/3780aadd-2d0d-4292-812a-8b02c602c96c)<p>
-
+3. In the PowerShell pane, type in the following commands to clone this repo:
+```
+rm -r dp500 -f
+git clone https://github.com/MicrosoftLearning/DP-500-Azure-Data-Analyst dp500
+```
+4. After the repo has been cloned, enter the following commands to change to the folder for this lab and run the setup.ps1 script it contains:
+```
+cd dp500/Allfiles/01
+./setup.ps1
+```
